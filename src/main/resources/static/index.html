@@ -13,7 +13,20 @@
         <h1>PR Risk Guard</h1>
         <p>Submit pull-request metadata and receive a typed risk decision with a human-review recommendation.</p>
     </header>
+    <section class="panel">
+        <h2>Analyze a GitHub pull request</h2>
 
+        <form id="github-form">
+            <label>
+                Public GitHub PR URL
+                <input name="url" type="url" required
+                       placeholder="https://github.com/Sidenai/sidex/pull/104">
+            </label>
+
+            <button type="submit">Analyze PR</button>
+            <p id="github-status" role="status"></p>
+        </form>
+    </section>
     <section class="panel">
         <h2>Analyze a pull request</h2>
         <form id="analysis-form">
@@ -37,12 +50,20 @@ src/test/java/auth/TokenValidatorTest.java</textarea></label>
         </form>
     </section>
 
+    <section id="latest-section" hidden>
+        <h2>Latest analysis</h2>
+        <div id="latest-result" class="results"></div>
+    </section>
+
     <section>
         <div class="section-heading">
             <h2>Recent analyses</h2>
             <button class="secondary" id="refresh" type="button">Refresh</button>
         </div>
         <div id="results" class="results"></div>
+        <button class="secondary" id="show-more" type="button" hidden>
+            Show more
+        </button>
     </section>
 </main>
 <script src="/app.js"></script>

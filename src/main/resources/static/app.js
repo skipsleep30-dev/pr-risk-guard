@@ -1,6 +1,11 @@
 const form = document.querySelector("#analysis-form");
 const results = document.querySelector("#results");
 const status = document.querySelector("#form-status");
+let savedAnalyses = [];
+let visibleCount = 5;
+let latestAnalysisId = null;
+
+const showMoreButton = document.querySelector("#show-more");
 
 form.addEventListener("submit", async (event) => {
     event.preventDefault();
@@ -30,6 +35,7 @@ form.addEventListener("submit", async (event) => {
         if (!response.ok) {
             throw new Error(await response.text());
         }
+        showLatestAnalysis(await response.json());
         status.textContent = "Analysis completed.";
         await loadAnalyses();
     } catch (error) {
@@ -41,18 +47,47 @@ document.querySelector("#refresh").addEventListener("click", loadAnalyses);
 
 async function loadAnalyses() {
     results.innerHTML = '<p class="empty">Loading…</p>';
+    showMoreButton.hidden = true;
+
     try {
         const response = await fetch("/api/analyses");
-        const analyses = await response.json();
-        if (!analyses.length) {
-            results.innerHTML = '<p class="empty">No analyses yet. Submit the example above.</p>';
-            return;
+        if (!response.ok) {
+            throw new Error(`Request failed (${response.status})`);
         }
-        results.innerHTML = analyses.map(renderAnalysis).join("");
+
+        savedAnalyses = await response.json();
+        renderHistory();
     } catch (error) {
-        results.innerHTML = `<p class="empty">Could not load analyses: ${escapeHtml(error.message)}</p>`;
+        results.innerHTML =
+            `<p class="empty">${escapeHtml(error.message)}</p>`;
     }
 }
+
+function renderHistory() {
+    const historyItems = savedAnalyses.filter(
+        item => item.id !== latestAnalysisId
+    );
+
+    results.innerHTML = historyItems.length
+        ? historyItems.slice(0, visibleCount).map(renderAnalysis).join("")
+        : '<p class="empty">No previous analyses.</p>';
+
+    showMoreButton.hidden = visibleCount >= historyItems.length;
+}
+
+function showLatestAnalysis(analysis) {
+    latestAnalysisId = analysis.id;
+    visibleCount = 5;
+
+    document.querySelector("#latest-result").innerHTML =
+        renderAnalysis(analysis);
+    document.querySelector("#latest-section").hidden = false;
+}
+
+showMoreButton.addEventListener("click", () => {
+    visibleCount += 5;
+    renderHistory();
+});
 
 function renderAnalysis(item) {
     const review = item.humanReviewRequired ? "Human review required" : "Standard review";
@@ -85,3 +120,38 @@ function escapeHtml(value) {
 }
 
 loadAnalyses();
+
+const githubForm = document.querySelector("#github-form");
+const githubStatus = document.querySelector("#github-status");
+
+githubForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const button = githubForm.querySelector("button");
+    const url = new FormData(githubForm).get("url").trim();
+
+    button.disabled = true;
+    githubStatus.textContent = "Analyzing pull request…";
+
+    try {
+        const response = await fetch("/api/github/analyze", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({url})
+        });
+
+        if (!response.ok) {
+            const error = await response.json().catch(() => ({}));
+            throw new Error(
+                error.message || `Request failed (${response.status})`
+            );
+        }
+        showLatestAnalysis(await response.json());
+        githubStatus.textContent = "Analysis completed.";
+        await loadAnalyses();
+    } catch (error) {
+        githubStatus.textContent = `Analysis failed: ${error.message}`;
+    } finally {
+        button.disabled = false;
+    }
+});

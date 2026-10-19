@@ -71,7 +71,10 @@ button {
     font-weight: 750;
     padding: 11px 18px;
 }
-
+.card > p {
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
 button.secondary { background: #e8e5fb; color: #3b2aa2; }
 .section-heading { display: flex; align-items: center; justify-content: space-between; }
 .results { display: grid; gap: 14px; }
