@@ -1,0 +1,9 @@
+target/
+.mvn/apache-maven-*/
+.mvn/apache-maven-*-bin.tar.gz
+.idea/
+.vscode/
+*.iml
+.env
+data/
+*.log

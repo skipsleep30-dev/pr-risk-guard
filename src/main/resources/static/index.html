@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PR Risk Guard</title>
+    <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main class="shell">
+    <header>
+        <p class="eyebrow">LEARNING PROJECT</p>
+        <h1>PR Risk Guard</h1>
+        <p>Submit pull-request metadata and receive a typed risk decision with a human-review recommendation.</p>
+    </header>
+
+    <section class="panel">
+        <h2>Analyze a pull request</h2>
+        <form id="analysis-form">
+            <div class="grid">
+                <label>Repository<input name="repository" value="acme/payments-api" required></label>
+                <label>PR number<input name="number" type="number" value="42" min="1" required></label>
+            </div>
+            <label>Title<input name="title" value="Update authentication token validation" required></label>
+            <label>Description<textarea name="description" rows="3">Adds stricter token validation and updates the login flow.</textarea></label>
+            <div class="grid three">
+                <label>Additions<input name="additions" type="number" value="180" min="0"></label>
+                <label>Deletions<input name="deletions" type="number" value="45" min="0"></label>
+                <label>Changed files<input name="changedFiles" type="number" value="6" min="0"></label>
+            </div>
+            <label>Files<textarea name="files" rows="4">src/main/java/auth/TokenValidator.java
+src/main/java/auth/LoginService.java
+src/test/java/auth/TokenValidatorTest.java</textarea></label>
+            <label class="checkbox"><input name="testsPresent" type="checkbox" checked> Test changes are present</label>
+            <button type="submit">Analyze risk</button>
+            <p id="form-status" role="status"></p>
+        </form>
+    </section>
+
+    <section>
+        <div class="section-heading">
+            <h2>Recent analyses</h2>
+            <button class="secondary" id="refresh" type="button">Refresh</button>
+        </div>
+        <div id="results" class="results"></div>
+    </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

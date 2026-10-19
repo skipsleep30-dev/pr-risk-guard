@@ -1,0 +1,63 @@
+spring:
+  application:
+    name: pr-risk-guard
+  datasource:
+    url: jdbc:h2:file:./data/prguard;MODE=PostgreSQL;AUTO_SERVER=TRUE
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+  threads:
+    virtual:
+      enabled: false
+
+server:
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+prguard:
+  github:
+    webhook-secret: ${GITHUB_WEBHOOK_SECRET:}
+    require-signature: ${GITHUB_REQUIRE_SIGNATURE:true}
+    token: ${GITHUB_TOKEN:}
+  decision:
+    provider: ${DECISION_PROVIDER:rules}
+    confidence-threshold: ${DECISION_CONFIDENCE_THRESHOLD:0.75}
+  jev:
+    api-url: ${JEV_API_URL:https://api.typesafe.ai/v1/systemone}
+    api-key: ${JEV_API_KEY:}
+    model: ${JEV_MODEL:jev-latest}
+  narrative:
+    provider: ${NARRATIVE_PROVIDER:template}
+    api-url: ${NARRATIVE_API_URL:}
+    api-key: ${NARRATIVE_API_KEY:}
+    model: ${NARRATIVE_MODEL:}
+
+logging:
+  level:
+    com.ankit.prguard: INFO
+
+---
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/prguard}
+    username: ${DB_USERNAME:prguard}
+    password: ${DB_PASSWORD:prguard}
+  jpa:
+    hibernate:
+      ddl-auto: update
