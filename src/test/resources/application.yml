@@ -12,3 +12,5 @@ prguard:
     provider: rules
   narrative:
     provider: template
+PRGUARD_PASSWORD1: test-demo-password
+PRGUARD_PASSWORD2: test-reviewer-password

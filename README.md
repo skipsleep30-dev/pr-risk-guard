@@ -79,6 +79,31 @@ The application combines Jev's typed results and confidence values in Java. It e
 
 ## REST API
 
+Set `PRGUARD_PASSWORD1` and `PRGUARD_PASSWORD2` to distinct development passwords
+before starting the app. API and dashboard requests use HTTP Basic authentication.
+The signed GitHub webhook remains independently authenticated by its HMAC signature.
+
+Analysis requests now return `202 Accepted` with a `PENDING` job. Poll
+`GET /api/analyses/{id}` until it is `COMPLETED` or `FAILED`. Repeating the same
+request with the same `Idempotency-Key` returns the existing job; reusing the key
+for different PR data returns `409 Conflict`. `POST /api/analyses/{id}/retry`
+requeues a failed job. Users can see only their own jobs and analyses.
+
+On an existing PostgreSQL database, run this once before starting the updated
+application, because pending jobs have no decision or narrative yet:
+
+```sql
+ALTER TABLE pull_request_analysis ALTER COLUMN risk_level DROP NOT NULL;
+ALTER TABLE pull_request_analysis ALTER COLUMN decision_model DROP NOT NULL;
+ALTER TABLE pull_request_analysis ALTER COLUMN narrative DROP NOT NULL;
+```
+
+Existing rows predate ownership and remain outside user history. Use a fresh
+development database or backfill those rows before relying on old history.
+After Hibernate updates an existing schema, confirm that the database has the
+`uq_analysis_owner_key` unique constraint on `(owner, request_key)`; concurrent
+deduplication depends on that database constraint.
+
 Create an analysis:
 
 ```bash

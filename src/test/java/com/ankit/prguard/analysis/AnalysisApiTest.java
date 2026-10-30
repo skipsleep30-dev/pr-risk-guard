@@ -6,6 +6,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.web.servlet.MvcResult;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -14,14 +18,18 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@WithMockUser(username = "demo")
 class AnalysisApiTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper mapper;
+
     @Test
     void createsAndListsAnalysis() throws Exception {
-        mockMvc.perform(post("/api/analyses")
+        MvcResult submitted = mockMvc.perform(post("/api/analyses")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
@@ -40,10 +48,25 @@ class AnalysisApiTest {
                                   "testsPresent": true
                                 }
                                 """))
-                .andExpect(status().isCreated())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.repository").value("acme/identity"))
-                .andExpect(jsonPath("$.riskLevel").value("HIGH"))
-                .andExpect(jsonPath("$.humanReviewRequired").value(true));
+                .andExpect(jsonPath("$.status").exists())
+                .andReturn();
+
+        String id = mapper.readTree(submitted.getResponse().getContentAsString()).path("id").asText();
+        String completed = "";
+        for (int attempt = 0; attempt < 40; attempt++) {
+            completed = mockMvc.perform(get("/api/analyses/" + id))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            if (completed.contains("\"status\":\"COMPLETED\"")) break;
+            Thread.sleep(50);
+        }
+        assertThat(completed).contains("\"status\":\"COMPLETED\"");
+        assertThat(completed).contains("\"riskLevel\":\"HIGH\"");
+
+        mockMvc.perform(get("/api/analyses/" + id)
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("reviewer")))
+                .andExpect(status().isNotFound());
 
         mockMvc.perform(get("/api/analyses"))
                 .andExpect(status().isOk())

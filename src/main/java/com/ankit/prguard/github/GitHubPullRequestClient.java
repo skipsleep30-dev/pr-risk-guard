@@ -13,6 +13,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 
 @Component
 public class GitHubPullRequestClient {
+    public record FetchedPullRequest(PullRequestSnapshot snapshot, String headSha) {}
     private final RestClient api;
     private final String token;
 
@@ -24,7 +25,7 @@ public class GitHubPullRequestClient {
         this.token = properties.github().token();
     }
 
-    public PullRequestSnapshot fetch(String owner, String repo, int number) {
+    public FetchedPullRequest fetch(String owner, String repo, int number) {
         JsonNode pr = get("/repos/{owner}/{repo}/pulls/{number}",owner,repo,number);
 
         List<String> filenames = new ArrayList<>();
@@ -49,7 +50,7 @@ public class GitHubPullRequestClient {
         boolean testsPresent = filenames.stream()
                                 .map(name -> name.toLowerCase(Locale.ROOT))
                                 .anyMatch(name -> name.contains("test") || name.contains("spec"));
-        return new PullRequestSnapshot(
+        PullRequestSnapshot snapshot = new PullRequestSnapshot(
             owner + "/" + repo,
             pr.path("number").asInt(),
                 pr.path("title").asText(),
@@ -60,7 +61,10 @@ public class GitHubPullRequestClient {
                 pr.path("changed_files").asInt(),
                 filenames,
                 testsPresent
-        );         
+        );
+        String sha = pr.path("head").path("sha").asText();
+        if (sha.isBlank()) throw new IllegalStateException("GitHub PR has no head SHA");
+        return new FetchedPullRequest(snapshot, sha);
     }
 
     public JsonNode get(String path, Object... variables) {

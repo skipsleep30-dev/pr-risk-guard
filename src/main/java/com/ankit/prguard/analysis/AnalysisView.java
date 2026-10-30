@@ -26,5 +26,9 @@ public record AnalysisView(
         String decisionModel,
         String narrative,
         Instant createdAt,
-        long durationMs
+        long durationMs,
+        JobStatus status,
+        String errorCode,
+        Instant startedAt,
+        Instant finishedAt
 ) {}

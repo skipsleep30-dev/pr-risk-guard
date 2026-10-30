@@ -35,7 +35,9 @@ form.addEventListener("submit", async (event) => {
         if (!response.ok) {
             throw new Error(await response.text());
         }
-        showLatestAnalysis(await response.json());
+        const job = await response.json();
+        status.textContent = "Queued; waiting for analysis…";
+        showLatestAnalysis(await waitForCompletion(job.id));
         status.textContent = "Analysis completed.";
         await loadAnalyses();
     } catch (error) {
@@ -90,6 +92,10 @@ showMoreButton.addEventListener("click", () => {
 });
 
 function renderAnalysis(item) {
+    if (item.status !== "COMPLETED") {
+        return `<article class="card"><h3>${escapeHtml(item.title)}</h3>
+            <p>${escapeHtml(item.status)}${item.errorCode ? `: ${escapeHtml(item.errorCode)}` : ""}</p></article>`;
+    }
     const review = item.humanReviewRequired ? "Human review required" : "Standard review";
     return `
         <article class="card">
@@ -121,6 +127,18 @@ function escapeHtml(value) {
 
 loadAnalyses();
 
+async function waitForCompletion(id) {
+    for (let attempt = 0; attempt < 120; attempt++) {
+        const response = await fetch(`/api/analyses/${encodeURIComponent(id)}`);
+        if (!response.ok) throw new Error(`Job lookup failed (${response.status})`);
+        const job = await response.json();
+        if (job.status === "COMPLETED") return job;
+        if (job.status === "FAILED") throw new Error(job.errorCode || "Analysis failed");
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+    throw new Error("Analysis is still running; refresh the history later.");
+}
+
 const githubForm = document.querySelector("#github-form");
 const githubStatus = document.querySelector("#github-status");
 
@@ -146,7 +164,9 @@ githubForm.addEventListener("submit", async (event) => {
                 error.message || `Request failed (${response.status})`
             );
         }
-        showLatestAnalysis(await response.json());
+        const job = await response.json();
+        githubStatus.textContent = "Queued; waiting for analysis…";
+        showLatestAnalysis(await waitForCompletion(job.id));
         githubStatus.textContent = "Analysis completed.";
         await loadAnalyses();
     } catch (error) {

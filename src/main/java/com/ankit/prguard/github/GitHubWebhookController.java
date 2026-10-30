@@ -62,8 +62,12 @@ public class GitHubWebhookController {
             return ResponseEntity.accepted().body(Map.of("status", "ignored", "reason", "unsupported action"));
         }
 
-        AnalysisView result = analysisService.analyze(toSnapshot(root));
-        return ResponseEntity.status(HttpStatus.CREATED).body(result);
+        PullRequestSnapshot snapshot = toSnapshot(root);
+        String sha = root.path("pull_request").path("head").path("sha").asText();
+        if (sha.isBlank()) return ResponseEntity.badRequest().body(Map.of("error", "missing head SHA"));
+        String key = snapshot.repository() + "#" + snapshot.number() + "@" + sha;
+        AnalysisView result = analysisService.submit(snapshot, "webhook", key);
+        return ResponseEntity.accepted().body(result);
     }
 
     private PullRequestSnapshot toSnapshot(JsonNode root) {

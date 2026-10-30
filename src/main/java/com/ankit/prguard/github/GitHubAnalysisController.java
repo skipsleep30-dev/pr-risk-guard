@@ -5,6 +5,8 @@ import com.ankit.prguard.analysis.AnalysisView;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -32,8 +34,8 @@ public class GitHubAnalysisController {
     public record AnalyzeRequest(@NotBlank String url) {}
 
     @PostMapping("/analyze")
-    @ResponseStatus(HttpStatus.CREATED)
-    public AnalysisView analyze(@Valid @RequestBody AnalyzeRequest request) {
+    public ResponseEntity<AnalysisView> analyze(@Valid @RequestBody AnalyzeRequest request,
+            Authentication authentication) {
         URI uri;
         try {
             uri = URI.create(request.url());
@@ -63,7 +65,9 @@ public class GitHubAnalysisController {
                     HttpStatus.BAD_REQUEST, "Invalid PR number", exception);
         }
 
-        return analysisService.analyze(
-                githubClient.fetch(match.group(1), match.group(2), number));
+        var fetched = githubClient.fetch(match.group(1), match.group(2), number);
+        String key = match.group(1) + "/" + match.group(2) + "#" + number + "@" + fetched.headSha();
+        AnalysisView job = analysisService.submit(fetched.snapshot(), authentication.getName(), key);
+        return ResponseEntity.accepted().location(URI.create("/api/analyses/" + job.id())).body(job);
     }
 }
